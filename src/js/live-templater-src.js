@@ -83,11 +83,11 @@
 	};
 
 	LiveTemplater.prototype.getColorInput = function(htmlVar) {
-		return `<input type="color" name="${htmlVar.variableName}" id="${this.options.id}-${htmlVar.variableName}" value="${htmlVar.value}"`;
+		return `<input type="color" name="${htmlVar.variableName}" id="${this.options.id}-${htmlVar.variableName}" value="${htmlVar.value}" />`;
 	};
 
 	LiveTemplater.prototype.getTextInput = function (htmlVar) {
-		return 	`<input type="text" name="${htmlVar.variableName}" id="${this.options.id}-${htmlVar.variableName}" value="${htmlVar.value}"`;
+		return 	`<textarea name="${htmlVar.variableName}" id="${this.options.id}-${htmlVar.variableName}">${htmlVar.value}</textarea>`;
 	};
 
 	LiveTemplater.prototype.getVariableInputHtml = function(htmlVar) {
@@ -141,20 +141,18 @@
 			$variables = $templaterContainer.find('.template-variable'),
 			htmlVars = this.htmlVars;
 
-		$variables.on('change', function (evt) {
-			let $input = $(this).find('input'),
+		$variables.on('change', 'input', function (evt) {
+			let $input = $(this),
 				val = $input.val(),
 				htmlVar = htmlVars[$input.attr('name')];
 
-			switch (htmlVar.type)
-			{
-				case 'text':
-					$templaterContainer.find(`#${htmlVar.variable}`).text(val);
-					break;
-				default:
-					templaterCont.style.setProperty(htmlVar.variable, val);
-					break;
-			}
+			templaterCont.style.setProperty(htmlVar.variable, val);
+		}).on('change', 'textarea', function (evt) {
+			let $textArea = $(this),
+				val = $textArea.val(),
+				htmlVar = htmlVars[$textArea.attr('name')];
+
+			$templaterContainer.find(`#${htmlVar.variable}`).text(val);
 		});
 	};
 

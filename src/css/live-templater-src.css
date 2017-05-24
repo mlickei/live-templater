@@ -1,0 +1,30 @@
+.templater-container {
+	display: flex;
+	width: 100%;
+}
+
+.templater-container .template-variables {
+	flex: 1 1 auto;
+}
+
+.templater-container .template-variable {
+	display: flex;
+	align-items: center;
+}
+
+.templater-container .template-variable + .template-variable {
+	margin-top: 16px;
+}
+
+.templater-container .template-variable label {
+	margin-right: 16px;
+}
+
+.templater-container .template-variable textarea {
+	min-width: 180px;
+	min-height: 30px;
+}
+
+.templater-container .live-template-preview-container {
+	flex: 1 1 auto;
+}
