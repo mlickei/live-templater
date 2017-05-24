@@ -7,6 +7,24 @@
 		this.type = type;
 	};
 
+	function replaceCSSVar(variable, htmlVar, html) {
+		return html.replace(variable, `var(${htmlVar.variable})`);
+	}
+
+	function replaceTextVar(variable, htmlVar, html) {
+		return html.replace(variable, `<span id="${htmlVar.variable}">${htmlVar.value}</span>`);
+	}
+
+	function replaceVariableValues(variable, htmlVar, html) {
+		switch (htmlVar.type)
+		{
+			case 'text':
+				return replaceTextVar(variable, htmlVar, html);
+			default:
+				return replaceCSSVar(variable, htmlVar, html);
+		}
+	}
+
 	function processHtmlForVars(html) {
 		const varRegx = /\${[^{,}]+}/g,
 			vars = html.match(varRegx);
@@ -23,8 +41,13 @@
 				htmlObj = {};
 
 			let htmlVar = new HtmlVariable(newVar, '--' + newVar, defaultVal, varType);
-			htmlVarArr.push(htmlVar);
-			html = html.replace(variable, `var(${htmlVar.variable})`);
+
+			if(varType !== 'string') {
+				htmlVarArr.push(htmlVar);
+			}
+
+			html = replaceVariableValues(variable, htmlVar, html);
+
 			htmlObj[newVar] = htmlVar;
 			htmlVars = $.extend(true, htmlObj, htmlVars);
 		}
@@ -63,10 +86,16 @@
 		return `<input type="color" name="${htmlVar.variableName}" id="${this.options.id}-${htmlVar.variableName}" value="${htmlVar.value}"`;
 	};
 
+	LiveTemplater.prototype.getTextInput = function (htmlVar) {
+		return 	`<input type="text" name="${htmlVar.variableName}" id="${this.options.id}-${htmlVar.variableName}" value="${htmlVar.value}"`;
+	};
+
 	LiveTemplater.prototype.getVariableInputHtml = function(htmlVar) {
 		switch (htmlVar.type) {
 			case 'color':
 				return this.getColorInput(htmlVar);
+			case 'text':
+				return this.getTextInput(htmlVar);
 		}
 	};
 
@@ -117,7 +146,15 @@
 				val = $input.val(),
 				htmlVar = htmlVars[$input.attr('name')];
 
-			templaterCont.style.setProperty(htmlVar.variable, val);
+			switch (htmlVar.type)
+			{
+				case 'text':
+					$templaterContainer.find(`#${htmlVar.variable}`).text(val);
+					break;
+				default:
+					templaterCont.style.setProperty(htmlVar.variable, val);
+					break;
+			}
 		});
 	};
 
