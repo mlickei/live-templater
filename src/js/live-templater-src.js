@@ -147,7 +147,7 @@
 				htmlVar = htmlVars[$input.attr('name')];
 
 			templaterCont.style.setProperty(htmlVar.variable, val);
-		}).on('change', 'textarea', function (evt) {
+		}).on('keyup', 'textarea', function (evt) {
 			let $textArea = $(this),
 				val = $textArea.val(),
 				htmlVar = htmlVars[$textArea.attr('name')];
