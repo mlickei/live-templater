@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Example 2</title>
+	<script type="text/javascript" src="../../libs/jquery-3.1.1.min.js"></script>
+	<script type="text/javascript" src="../../src/js/live-templater-src.js"></script>
+	<link rel="stylesheet" href="../../src/css/live-templater-src.css" />
+</head>
+<body>
+<div class="example-template-2-1"></div>
+<div class="example-template-2-2"></div>
+<script>
+	jQuery(function ($) {
+		$('.example-template-2-1').liveTemplater({
+			id: 'example-2-1',
+			includeCopyBtn: true,
+			rawHtml: '<div style="background-color: ${background-color-1|#000000|color}; min-width: 200px; min-height: 100px; color: ${font-color-1|#ffffff|color};"><div style="background-color: ${background-color-1|#000000|color};"><span>${example-text-1|This is example text inside a colored box|text}</span></div></div>'
+		});
+
+		$('.example-template-2-2').liveTemplater({
+			id: 'example-2-2',
+			includeCopyBtn: true,
+			rawHtml: '<div style="background-color: ${background-color-1|#000000|color}; min-width: 200px; min-height: 100px; color: ${font-color-1|#ffffff|color};"><span>${example-text-1|This is example text inside a colored box|text}</span></div></div><div style="min-height:300px; min-width:200px; background-color:${bottom-color-1|#afafaf|color}"></div>'
+		});
+	});
+</script>
+</body>
+</html>

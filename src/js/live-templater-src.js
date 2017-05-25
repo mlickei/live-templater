@@ -199,7 +199,7 @@
 	LiveTemplater.prototype.attachEvents = function () {
 		let $templaterContainer = $(`#${this.options.id}`),
 			$variables = $templaterContainer.find('.template-variable'),
-			$templateActions = $templaterContainer.find('.template-actions');
+			$templateActions = $templaterContainer.find('.template-actions'),
 			templaterCont = $templaterContainer.get(0),
 			htmlVars = this.htmlVars;
 
@@ -208,12 +208,14 @@
 				val = $input.val(),
 				htmlVar = htmlVars[$input.attr('name')];
 
+			htmlVar.value = val;
 			templaterCont.style.setProperty(htmlVar.variable, val);
 		}).on('keyup', 'textarea', function (evt) {
 			let $textArea = $(this),
 				val = $textArea.val(),
 				htmlVar = htmlVars[$textArea.attr('name')];
 
+			htmlVar.value = val;
 			$templaterContainer.find(`#${htmlVar.variable}`).text(val);
 		});
 
