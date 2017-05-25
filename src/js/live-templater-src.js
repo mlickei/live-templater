@@ -41,14 +41,13 @@
 				htmlObj = {};
 
 			let htmlVar = new HtmlVariable(newVar, '--' + newVar, defaultVal, varType);
-
-			if (varType !== 'string') {
-				htmlVarArr.push(htmlVar);
-			}
-
 			html = replaceVariableValues(variable, htmlVar, html);
 
 			if(htmlVars[newVar] == undefined) {
+				if (varType !== 'string') {
+					htmlVarArr.push(htmlVar);
+				}
+
 				htmlObj[newVar] = htmlVar;
 				htmlVars = $.extend(true, htmlObj, htmlVars);
 			}
