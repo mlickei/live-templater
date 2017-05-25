@@ -15,7 +15,7 @@
 	jQuery(function ($) {
 		$('.example-templates').liveTemplater({
 			id: 'example-1',
-			rawHtml: '<div style="background-color: ${background-color-1|#000000|color}; min-width: 200px; min-height: 100px; color: ${font-color-1|#ffffff|color};"><span>${example-text-1|This is example text inside a colored box|text}</span></div>'
+			rawHtml: '<div style="background-color: ${background-color-1|#000000|color}; min-width: 200px; min-height: 100px; color: ${font-color-1|#ffffff|color};"><div style="background-color: ${background-color-1|#000000|color};"><span>${example-text-1|This is example text inside a colored box|text}</span></div></div>'
 		});
 	});
 </script>
