@@ -12,7 +12,7 @@
 	}
 
 	function replaceTextVar(variable, htmlVar, html) {
-		return html.replace(variable, `<span id="${htmlVar.variable}">${htmlVar.value}</span>`);
+		return html.replace(variable, `<span class="live-templater-text-var" id="${htmlVar.variable}">${htmlVar.value}</span>`);
 	}
 
 	function replaceVariableValues(variable, htmlVar, html) {
@@ -62,7 +62,7 @@
 
 	$.fn.liveTemplater = function (options) {
 		let finalOpts = $.extend(true, {
-
+			includeCopyBtn: false
 		}, options);
 
 		return this.each(function() {
@@ -120,14 +120,30 @@
 		}
 	};
 
+	LiveTemplater.prototype.getTemplateActions = function() {
+		let actions = '';
+
+		if(this.options.includeCopyBtn) {
+			actions = actions + `<button class="template-btn template-copy-html-btn">Copy HTML</button>`;
+		}
+
+		return actions;
+	};
+
 	LiveTemplater.prototype.getTemplateHtml = function() {
 		const variablesHtml = this.getVariablesHtml();
 
 		return `<div class="templater-container" id="${this.options.id}">
-					<div class="template-variables">${variablesHtml.varsHtml}</div>
-					<div class="live-template-preview-container">
-						<style>#${this.options.id} { ${variablesHtml.stylesHtml} }</style>
-						<div class="live-template-preview">${this.processedHtml}</div>
+					<div class="templater-top-container">
+						<div class="template-name">${this.options.id}</div>
+						<div class="template-actions">${this.getTemplateActions()}</div>
+					</div>
+					<div class="templater-preview-container">
+						<div class="template-variables">${variablesHtml.varsHtml}</div>
+						<div class="live-template-preview-container">
+							<style>#${this.options.id} { ${variablesHtml.stylesHtml} }</style>
+							<div class="live-template-preview">${this.processedHtml}</div>
+						</div>
 					</div>
 				</div>`;
 	};
@@ -136,10 +152,55 @@
 		this.$target.append(this.getTemplateHtml());
 	};
 
+	function getEvaluatedTemplateHtml($html, htmlVars) {
+		//Remove text var wrappers
+		let $textVars = $html.find('.live-templater-text-var')
+
+		for(let idx = 0; idx < $textVars.length; idx ++) {
+			let $this = $($textVars.get(idx)),
+				$parent = $this.parent(),
+				innerVal = $this.text();
+
+			$this.remove();
+			$parent.text(innerVal);
+		}
+
+		let html = $html.html();
+
+		for(let htmlVarKey of Object.keys(htmlVars)) {
+			let htmlVar = htmlVars[htmlVarKey];
+
+			if(htmlVar.type != 'text') {
+				html = html.split(`var(${htmlVar.variable})`).join(htmlVar.value);
+			}
+		}
+
+		return html;
+	}
+
+	function copyLiveTemplateToClipboard($target, htmlVars) {
+		let txtAr = document.createElement('TEXTAREA');
+		txtAr.value = getEvaluatedTemplateHtml($target, htmlVars);
+		txtAr.readOnly= true;
+
+		let $txtAr = $(txtAr).appendTo($target).css('height', 0).css('width', 0).css('overflow', 'hidden');
+		txtAr.select();
+		let success = document.execCommand('copy');
+
+		$txtAr.remove();
+
+		if(success) {
+			alert("Copied to clipboard!");
+		} else {
+			alert("Failed to copy to clipboard!");
+		}
+	}
+
 	LiveTemplater.prototype.attachEvents = function () {
 		let $templaterContainer = $(`#${this.options.id}`),
-			templaterCont = $templaterContainer.get(0),
 			$variables = $templaterContainer.find('.template-variable'),
+			$templateActions = $templaterContainer.find('.template-actions');
+			templaterCont = $templaterContainer.get(0),
 			htmlVars = this.htmlVars;
 
 		$variables.on('change', 'input', function (evt) {
@@ -155,6 +216,12 @@
 
 			$templaterContainer.find(`#${htmlVar.variable}`).text(val);
 		});
+
+		if(this.options.includeCopyBtn) {
+			$templateActions.on('click', '.template-copy-html-btn', function (evt) {
+				copyLiveTemplateToClipboard($templaterContainer.find('.live-template-preview'), htmlVars);
+			});
+		}
 	};
 
 	LiveTemplater.prototype.removeTemplateUI = function() {

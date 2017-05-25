@@ -1,4 +1,9 @@
-.templater-container {
+.templater-container .templater-top-container {
+	display: flex;
+	width: 100%;
+}
+
+.templater-container .templater-preview-container {
 	display: flex;
 	width: 100%;
 }
