@@ -1,6 +1,13 @@
 .templater-container .templater-top-container {
 	display: flex;
 	width: 100%;
+	padding-bottom: 6px;
+	border-bottom: 1px solid #131313;
+	margin-bottom: 6px;
+}
+
+.templater-container .template-actions {
+	margin-left: 16px;
 }
 
 .templater-container .templater-preview-container {
