@@ -1,5 +1,16 @@
 (function($) {
 
+	//TODO unit test some how
+
+	const EVENT_TYPES = {
+		INITIALIZED: "initialized",
+		// BEFORE_COPY: "before-copy",
+		// AFTER_COPY: "after-copy"
+		//TODO Add before and afters for most of the general actions that occur
+	};
+
+	window.LiveTemplater = {EVENT_TYPES: EVENT_TYPES};
+
 	let HtmlVariable = function (variableName, variable, value, type) {
 		this.variableName = variableName;
 		this.variable = variable;
@@ -65,180 +76,197 @@
 			includeCopyBtn: false
 		}, options);
 
+		let $this = $(this);
+
 		return this.each(function() {
-			(new LiveTemplater($(this), finalOpts)).init();
+			new LiveTemplater($this, finalOpts);
 		});
 	};
 
 	let LiveTemplater = function($target, options) {
-		this.options = options;
-		this.$target = $target;
-	};
+		let opts = options,
+			$container = $target,
+			processedHtml,
+			htmlVarArr,
+			htmlVars,
+			liveTemplater = this;
 
-	LiveTemplater.prototype.setupVariables = function() {
-		const results = processHtmlForVars(this.options.rawHtml);
+		function setupVariables() {
+			const results = processHtmlForVars(opts.rawHtml);
 
-		this.processedHtml = results.newHtml;
-		this.htmlVarArr = results.htmlVarArr;
-		this.htmlVars = results.htmlVars;
-	};
-
-	LiveTemplater.prototype.getColorInput = function(htmlVar) {
-		return `<input type="color" name="${htmlVar.variableName}" id="${this.options.id}-${htmlVar.variableName}" value="${htmlVar.value}" />`;
-	};
-
-	LiveTemplater.prototype.getTextInput = function (htmlVar) {
-		return 	`<textarea name="${htmlVar.variableName}" id="${this.options.id}-${htmlVar.variableName}">${htmlVar.value}</textarea>`;
-	};
-
-	LiveTemplater.prototype.getVariableInputHtml = function(htmlVar) {
-		switch (htmlVar.type) {
-			case 'color':
-				return this.getColorInput(htmlVar);
-			case 'text':
-				return this.getTextInput(htmlVar);
-		}
-	};
-
-	LiveTemplater.prototype.getCSSVariableStyle = function(htmlVar) {
-		return `${htmlVar.variable}: ${htmlVar.value};`;
-	};
-
-	LiveTemplater.prototype.getVariablesHtml = function() {
-		let varsHtml = '',
-			stylesHtml = '';
-
-		for(let idx = 0; idx < this.htmlVarArr.length; idx ++) {
-			let htmlVar = this.htmlVarArr[idx];
-			varsHtml = varsHtml + `<div class="template-variable"><label for="${this.options.id}-${htmlVar.variableName}">${htmlVar.variableName}</label>${this.getVariableInputHtml(htmlVar)}</div>`;
-			stylesHtml = stylesHtml + this.getCSSVariableStyle(htmlVar);
+			processedHtml = results.newHtml;
+			htmlVarArr = results.htmlVarArr;
+			htmlVars = results.htmlVars;
 		}
 
-		return {
-			varsHtml: varsHtml,
-			stylesHtml: stylesHtml
-		}
-	};
-
-	LiveTemplater.prototype.getTemplateActions = function() {
-		let actions = '';
-
-		if(this.options.includeCopyBtn) {
-			actions = actions + `<button class="template-btn template-copy-html-btn">Copy HTML</button>`;
+		function getColorInput(htmlVar, options) {
+			return `<input type="color" name="${htmlVar.variableName}" id="${options.id}-${htmlVar.variableName}" value="${htmlVar.value}" />`;
 		}
 
-		return actions;
-	};
+		function getTextInput(htmlVar, options) {
+			return 	`<textarea name="${htmlVar.variableName}" id="${options.id}-${htmlVar.variableName}">${htmlVar.value}</textarea>`;
+		}
 
-	LiveTemplater.prototype.getTemplateHtml = function() {
-		const variablesHtml = this.getVariablesHtml();
+		function getVariableInputHtml(htmlVar, options) {
+			switch (htmlVar.type) {
+				case 'color':
+					return getColorInput(htmlVar, options);
+				case 'text':
+					return getTextInput(htmlVar, options);
+			}
+		}
 
-		return `<div class="templater-container" id="${this.options.id}">
+		function getCSSVariableStyle(htmlVar) {
+			return `${htmlVar.variable}: ${htmlVar.value};`;
+		}
+
+		function getVariablesHtml(htmlVarArr, options) {
+			let varsHtml = '',
+				stylesHtml = '';
+
+			for(let idx = 0; idx < htmlVarArr.length; idx ++) {
+				let htmlVar = htmlVarArr[idx];
+				varsHtml = varsHtml + `<div class="template-variable"><label for="${options.id}-${htmlVar.variableName}">${htmlVar.variableName}</label>${getVariableInputHtml(htmlVar, options)}</div>`;
+				stylesHtml = stylesHtml + getCSSVariableStyle(htmlVar);
+			}
+
+			return {
+				varsHtml: varsHtml,
+				stylesHtml: stylesHtml
+			}
+		}
+
+		 function getTemplateActions(options) {
+			let actions = '';
+
+			if(options.includeCopyBtn) {
+				actions = actions + `<button class="template-btn template-copy-html-btn">Copy HTML</button>`;
+			}
+
+			return actions;
+		}
+
+		function getTemplateHtml(processedHtml, htmlVarArr, options) {
+			const variablesHtml = getVariablesHtml(htmlVarArr, options);
+
+			return `<div class="templater-container" id="${options.id}">
 					<div class="templater-top-container">
-						<div class="template-name">${this.options.id}</div>
-						<div class="template-actions">${this.getTemplateActions()}</div>
+						<div class="template-name">${options.id}</div>
+						<div class="template-actions">${getTemplateActions(options)}</div>
 					</div>
 					<div class="templater-preview-container">
 						<div class="template-variables">${variablesHtml.varsHtml}</div>
 						<div class="live-template-preview-container">
-							<style>#${this.options.id} { ${variablesHtml.stylesHtml} }</style>
-							<div class="live-template-preview">${this.processedHtml}</div>
+							<style>#${options.id} { ${variablesHtml.stylesHtml} }</style>
+							<div class="live-template-preview">${processedHtml}</div>
 						</div>
 					</div>
 				</div>`;
-	};
-
-	LiveTemplater.prototype.buildTemplateUI = function() {
-		this.$target.append(this.getTemplateHtml());
-	};
-
-	function getEvaluatedTemplateHtml($html, htmlVars) {
-		//Remove text var wrappers
-		let $textVars = $html.find('.live-templater-text-var')
-
-		for(let idx = 0; idx < $textVars.length; idx ++) {
-			let $this = $($textVars.get(idx)),
-				$parent = $this.parent(),
-				innerVal = $this.text();
-
-			$this.remove();
-			$parent.text(innerVal);
 		}
 
-		let html = $html.html();
+		function buildTemplateUI($container, processedHtml, htmlVarArr, options) {
+			$container.append(getTemplateHtml(processedHtml, htmlVarArr, options));
+		}
 
-		for(let htmlVarKey of Object.keys(htmlVars)) {
-			let htmlVar = htmlVars[htmlVarKey];
+		function getEvaluatedTemplateHtml($html, htmlVars) {
+			//Remove text var wrappers
+			let $textVars = $html.find('.live-templater-text-var')
 
-			if(htmlVar.type != 'text') {
-				html = html.split(`var(${htmlVar.variable})`).join(htmlVar.value);
+			for(let idx = 0; idx < $textVars.length; idx ++) {
+				let $this = $($textVars.get(idx)),
+					$parent = $this.parent(),
+					innerVal = $this.text();
+
+				$this.remove();
+				$parent.text(innerVal);
+			}
+
+			let html = $html.html();
+
+			for(let htmlVarKey of Object.keys(htmlVars)) {
+				let htmlVar = htmlVars[htmlVarKey];
+
+				if(htmlVar.type != 'text') {
+					html = html.split(`var(${htmlVar.variable})`).join(htmlVar.value);
+				}
+			}
+
+			return html;
+		}
+
+		function copyLiveTemplateToClipboard($container, htmlVars) {
+			let txtAr = document.createElement('TEXTAREA');
+			txtAr.value = getEvaluatedTemplateHtml($container, htmlVars);
+			txtAr.readOnly= true;
+
+			let $txtAr = $(txtAr).appendTo($container).css('height', 0).css('width', 0).css('overflow', 'hidden');
+			txtAr.select();
+			let success = document.execCommand('copy');
+
+			$txtAr.remove();
+
+			if(success) {
+				alert("Copied to clipboard!");
+			} else {
+				alert("Failed to copy to clipboard!");
 			}
 		}
 
-		return html;
-	}
+		function attachEvents() {
+			let $templaterContainer = $(`#${opts.id}`),
+				$variables = $templaterContainer.find('.template-variable'),
+				$templateActions = $templaterContainer.find('.template-actions'),
+				templaterCont = $templaterContainer.get(0),
+				hVars = htmlVars;
 
-	function copyLiveTemplateToClipboard($target, htmlVars) {
-		let txtAr = document.createElement('TEXTAREA');
-		txtAr.value = getEvaluatedTemplateHtml($target, htmlVars);
-		txtAr.readOnly= true;
+			$variables.on('change', 'input', function (evt) {
+				let $input = $(this),
+					val = $input.val(),
+					htmlVar = hVars[$input.attr('name')];
 
-		let $txtAr = $(txtAr).appendTo($target).css('height', 0).css('width', 0).css('overflow', 'hidden');
-		txtAr.select();
-		let success = document.execCommand('copy');
+				htmlVar.value = val;
+				templaterCont.style.setProperty(htmlVar.variable, val);
+			}).on('keyup', 'textarea', function (evt) {
+				let $textArea = $(this),
+					val = $textArea.val(),
+					htmlVar = hVars[$textArea.attr('name')];
 
-		$txtAr.remove();
-
-		if(success) {
-			alert("Copied to clipboard!");
-		} else {
-			alert("Failed to copy to clipboard!");
-		}
-	}
-
-	LiveTemplater.prototype.attachEvents = function () {
-		let $templaterContainer = $(`#${this.options.id}`),
-			$variables = $templaterContainer.find('.template-variable'),
-			$templateActions = $templaterContainer.find('.template-actions'),
-			templaterCont = $templaterContainer.get(0),
-			htmlVars = this.htmlVars;
-
-		$variables.on('change', 'input', function (evt) {
-			let $input = $(this),
-				val = $input.val(),
-				htmlVar = htmlVars[$input.attr('name')];
-
-			htmlVar.value = val;
-			templaterCont.style.setProperty(htmlVar.variable, val);
-		}).on('keyup', 'textarea', function (evt) {
-			let $textArea = $(this),
-				val = $textArea.val(),
-				htmlVar = htmlVars[$textArea.attr('name')];
-
-			htmlVar.value = val;
-			$templaterContainer.find(`#${htmlVar.variable}`).text(val);
-		});
-
-		if(this.options.includeCopyBtn) {
-			$templateActions.on('click', '.template-copy-html-btn', function (evt) {
-				copyLiveTemplateToClipboard($templaterContainer.find('.live-template-preview'), htmlVars);
+				htmlVar.value = val;
+				$templaterContainer.find(`#${htmlVar.variable}`).text(val);
 			});
+
+			if(opts.includeCopyBtn) {
+				$templateActions.on('click', '.template-copy-html-btn', function (evt) {
+					copyLiveTemplateToClipboard($templaterContainer.find('.live-template-preview'), hVars);
+				});
+			}
 		}
-	};
 
-	LiveTemplater.prototype.removeTemplateUI = function() {
-		this.$target.empty();
-	};
+		function removeTemplateUI() {
+			$container.empty();
+		}
 
-	LiveTemplater.prototype.setupUI = function () {
-		this.removeTemplateUI();
-		this.buildTemplateUI();
-		this.attachEvents();
-	};
+		function setupUI() {
+			removeTemplateUI();
+			buildTemplateUI($container, processedHtml, htmlVarArr, opts);
+			attachEvents();
+		}
 
-	LiveTemplater.prototype.init = function() {
-		this.setupVariables();
-		this.setupUI();
+		function triggerEvent(eventType) {
+			$container.trigger(eventType, liveTemplater);
+		}
+
+		this.triggerEvent = function(eventType) {
+			triggerEvent(eventType);
+		};
+
+		function init() {
+			setupVariables();
+			setupUI();
+			triggerEvent(EVENT_TYPES.INITIALIZED);
+		}
+
+		init();
 	};
 
 } (jQuery));
