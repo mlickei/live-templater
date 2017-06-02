@@ -153,7 +153,7 @@
 
 			return `<div class="templater-container" id="${options.id}">
 					<div class="templater-top-container">
-						<div class="template-name">${options.id}</div>
+						<div class="template-name">${options.displayName !== undefined ? options.displayName : options.id}</div>
 						<div class="template-actions">${getTemplateActions(options)}</div>
 					</div>
 					<div class="templater-preview-container">
