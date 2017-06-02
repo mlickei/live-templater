@@ -99,8 +99,8 @@
 			htmlVars = results.htmlVars;
 		}
 
-		function getColorInput(htmlVar, options) {
-			return `<input type="color" name="${htmlVar.variableName}" id="${options.id}-${htmlVar.variableName}" value="${htmlVar.value}" />`;
+		function getColorInput(htmlVar, options, isColorInput = true) {
+			return `<input type="${isColorInput ? 'color' : 'text'}" name="${htmlVar.variableName}" id="${options.id}-${htmlVar.variableName}" value="${htmlVar.value}" />`;
 		}
 
 		function getTextInput(htmlVar, options) {
@@ -111,6 +111,8 @@
 			switch (htmlVar.type) {
 				case 'color':
 					return getColorInput(htmlVar, options);
+				case 'color-text':
+					return getColorInput(htmlVar, options, false);
 				case 'text':
 					return getTextInput(htmlVar, options);
 			}
