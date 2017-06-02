@@ -128,7 +128,7 @@
 
 			for(let idx = 0; idx < htmlVarArr.length; idx ++) {
 				let htmlVar = htmlVarArr[idx];
-				varsHtml = varsHtml + `<div class="template-variable"><label for="${options.id}-${htmlVar.variableName}">${htmlVar.variableName}</label>${getVariableInputHtml(htmlVar, options)}</div>`;
+				varsHtml = varsHtml + `<div class="template-variable ${htmlVar.type}"><label for="${options.id}-${htmlVar.variableName}">${htmlVar.variableName}</label>${getVariableInputHtml(htmlVar, options)}</div>`;
 				stylesHtml = stylesHtml + getCSSVariableStyle(htmlVar);
 			}
 
