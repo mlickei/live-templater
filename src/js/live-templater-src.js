@@ -23,13 +23,14 @@
 	}
 
 	function replaceTextVar(variable, htmlVar, html) {
-		return html.replace(variable, `<span class="live-templater-text-var" id="${htmlVar.variable}">${htmlVar.value}</span>`);
+		return html.replace(variable, `<span class="live-templater-${htmlVar.type}-var" id="${htmlVar.variable}">${htmlVar.value}</span>`);
 	}
 
 	function replaceVariableValues(variable, htmlVar, html) {
 		switch (htmlVar.type)
 		{
 			case 'text':
+			case 'textarea':
 				return replaceTextVar(variable, htmlVar, html);
 			default:
 				return replaceCSSVar(variable, htmlVar, html);
@@ -104,6 +105,10 @@
 		}
 
 		function getTextInput(htmlVar, options) {
+			return 	`<input type="text" name="${htmlVar.variableName}" id="${options.id}-${htmlVar.variableName}" value="${htmlVar.value}" />`;
+		}
+
+		function getTextAreaInput(htmlVar, options) {
 			return 	`<textarea name="${htmlVar.variableName}" id="${options.id}-${htmlVar.variableName}">${htmlVar.value}</textarea>`;
 		}
 
@@ -115,6 +120,8 @@
 					return getColorInput(htmlVar, options, false);
 				case 'text':
 					return getTextInput(htmlVar, options);
+				case 'textarea':
+					return getTextAreaInput(htmlVar, options);
 			}
 		}
 
@@ -172,10 +179,10 @@
 
 		function getEvaluatedTemplateHtml($html, htmlVars) {
 			//Remove text var wrappers
-			let $textVars = $html.find('.live-templater-text-var')
+			let $textAreaVars = $html.find('.live-templater-textarea-var');
 
-			for(let idx = 0; idx < $textVars.length; idx ++) {
-				let $this = $($textVars.get(idx)),
+			for(let idx = 0; idx < $textAreaVars.length; idx ++) {
+				let $this = $($textAreaVars.get(idx)),
 					$parent = $this.parent(),
 					innerVal = $this.text();
 
@@ -188,7 +195,7 @@
 			for(let htmlVarKey of Object.keys(htmlVars)) {
 				let htmlVar = htmlVars[htmlVarKey];
 
-				if(htmlVar.type != 'text') {
+				if(htmlVar.type !== 'text' || htmlVar.type !== 'textarea') {
 					html = html.split(`var(${htmlVar.variable})`).join(htmlVar.value);
 				}
 			}
@@ -221,7 +228,8 @@
 				templaterCont = $templaterContainer.get(0),
 				hVars = htmlVars;
 
-			$variables.on('change', 'input', function (evt) {
+			//TODO make the htmlvar do the html updating?
+			$variables.filter(':not(.text)').on('change', 'input', function (evt) {
 				let $input = $(this),
 					val = $input.val(),
 					htmlVar = hVars[$input.attr('name')];
@@ -232,6 +240,15 @@
 				let $textArea = $(this),
 					val = $textArea.val(),
 					htmlVar = hVars[$textArea.attr('name')];
+
+				htmlVar.value = val;
+				$templaterContainer.find(`#${htmlVar.variable}`).text(val);
+			});
+
+			$variables.filter('.text').on('keyup change', 'input', function (evt) {
+				let $input = $(this),
+					val = $input.val(),
+					htmlVar = hVars[$input.attr('name')];
 
 				htmlVar.value = val;
 				$templaterContainer.find(`#${htmlVar.variable}`).text(val);
