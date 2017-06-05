@@ -11,7 +11,8 @@
 
 	window.LiveTemplater = {EVENT_TYPES: EVENT_TYPES};
 
-	let HtmlVariable = function (variableName, variable, value, type) {
+	let HtmlVariable = function (parsedVariable, variableName, variable, value, type) {
+		this.parsedVariable = parsedVariable;
 		this.variableName = variableName;
 		this.variable = variable;
 		this.value = value;
@@ -26,12 +27,19 @@
 		return html.replace(variable, `<span class="live-templater-${htmlVar.type}-var" id="${htmlVar.variable}">${htmlVar.value}</span>`);
 	}
 
+	//TODO defer this to later I think, then we can capture the a tag involved and do crazzzy stuff
+	function replaceHrefVar(variable, htmlVar, html) {
+		return html/*.replace(variable, `${htmlVar.value}`)*/;
+	}
+
 	function replaceVariableValues(variable, htmlVar, html) {
 		switch (htmlVar.type)
 		{
 			case 'text':
 			case 'textarea':
 				return replaceTextVar(variable, htmlVar, html);
+			case 'href':
+				return replaceHrefVar(variable, htmlVar, html);
 			default:
 				return replaceCSSVar(variable, htmlVar, html);
 		}
@@ -52,13 +60,14 @@
 				varType = varProps[2],
 				htmlObj = {};
 
-			let htmlVar = new HtmlVariable(newVar, '--' + newVar, defaultVal, varType);
+			let htmlVar = new HtmlVariable(variable, newVar, '--' + newVar, defaultVal, varType);
 			html = replaceVariableValues(variable, htmlVar, html);
 
 			if(htmlVars[newVar] == undefined) {
-				if (varType !== 'string') {
+				// if (varType !== 'string') {
 					htmlVarArr.push(htmlVar);
-				}
+				// }
+				//TODO remove completely?
 
 				htmlObj[newVar] = htmlVar;
 				htmlVars = $.extend(true, htmlObj, htmlVars);
@@ -122,6 +131,8 @@
 					return getTextInput(htmlVar, options);
 				case 'textarea':
 					return getTextAreaInput(htmlVar, options);
+				case 'href':
+					return getTextInput(htmlVar, options);
 			}
 		}
 
@@ -177,6 +188,22 @@
 			$container.append(getTemplateHtml(processedHtml, htmlVarArr, options));
 		}
 
+		function evaluateHrefVariable($html, htmlVar) {
+			$html.find(`a.${opts.id}${htmlVar.variable}`).each((idx, el) => {
+				$(el).removeClass(`${opts.id}${htmlVar.variable}`);
+
+				if(!el.classList.length) {
+					el.removeAttribute('class');
+				}
+			});
+		}
+
+		function evaluateHrefVariables($html, htmlVars) {
+			for(let htmlVarKey of Object.keys(htmlVars)) {
+				evaluateHrefVariable($html, htmlVars[htmlVarKey])
+			}
+		}
+
 		function getEvaluatedTemplateHtml($html, htmlVars) {
 			//Remove text var wrappers
 			let $textAreaVars = $html.find('.live-templater-textarea-var');
@@ -190,12 +217,16 @@
 				$parent.text(innerVal);
 			}
 
+			evaluateHrefVariables($html, htmlVars);
+
 			let html = $html.html();
 
 			for(let htmlVarKey of Object.keys(htmlVars)) {
 				let htmlVar = htmlVars[htmlVarKey];
 
-				if(htmlVar.type !== 'text' || htmlVar.type !== 'textarea') {
+				if (htmlVar.type === 'href') {
+					//Do nothing for hrefs
+				} else if(htmlVar.type !== 'text' || htmlVar.type !== 'textarea') {
 					html = html.split(`var(${htmlVar.variable})`).join(htmlVar.value);
 				}
 			}
@@ -229,7 +260,7 @@
 				hVars = htmlVars;
 
 			//TODO make the htmlvar do the html updating?
-			$variables.filter(':not(.text)').on('change', 'input', function (evt) {
+			$variables.filter(':not(.text, .href)').on('change', 'input', function (evt) {
 				let $input = $(this),
 					val = $input.val(),
 					htmlVar = hVars[$input.attr('name')];
@@ -254,11 +285,34 @@
 				$templaterContainer.find(`#${htmlVar.variable}`).text(val);
 			});
 
+			$variables.filter('.href').on('keyup change', 'input', function (evt) {
+				let $input = $(this),
+					val = $input.val(),
+					htmlVar = hVars[$input.attr('name')];
+
+				htmlVar.value = val;
+				$templaterContainer.find(`a.${opts.id}${htmlVar.variable}`).attr('href', val);
+			});
+
 			if(opts.includeCopyBtn) {
 				$templateActions.on('click', '.template-copy-html-btn', function (evt) {
 					copyLiveTemplateToClipboard($templaterContainer.find('.live-template-preview'), hVars);
 				});
 			}
+		}
+
+		function processBuiltTemplateUI($container, htmlVarArr, opts) {
+			let $previewer = $container.find('.live-template-preview');
+
+			htmlVarArr.filter((hVar) => {
+				return hVar.type === 'href';
+			}).forEach((htmlVar) => {
+				$previewer.find(`a[href="${htmlVar.parsedVariable}"]`).each((idx, el) => {
+					let $el = $(el).attr('href', htmlVar.value);
+
+					$el.addClass(`${opts.id}${htmlVar.variable}`);
+				});
+			});
 		}
 
 		function removeTemplateUI() {
@@ -268,6 +322,7 @@
 		function setupUI() {
 			removeTemplateUI();
 			buildTemplateUI($container, processedHtml, htmlVarArr, opts);
+			processBuiltTemplateUI($container, htmlVarArr, opts);
 			attachEvents();
 		}
 
