@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Example 3</title>
+	<script type="text/javascript" src="../../libs/jquery-3.1.1.min.js"></script>
+	<script type="text/javascript" src="../../src/js/live-templater-src.js"></script>
+	<link rel="stylesheet" href="../../src/css/live-templater-src.css" />
+</head>
+<body>
+<div class="example-templates">
+
+</div>
+<script>
+	jQuery(function ($) {
+		$('.example-templates').on(LiveTemplater.EVENT_TYPES.INITIALIZED, (evt, templater) => {
+			console.log(templater);
+		}).liveTemplater({
+			id: 'example-1',
+			displayName: 'Example 1',
+			includeCopyBtn: true,
+			rawHtml: '<div style="background: ${background-image|/live-templater/examples/example-3/images/test-1.jpg|background-image}; min-width: 200px; min-height: 100px; color: ${font-color-1|#ffffff|color};"><div style="background-color: ${background-color-1|#000000|color};"><a href="${link|http://www.example.com/|href}"><span>${example-text-1|This is example text inside a colored box|text}</span></a></div></div>'
+		});
+	});
+</script>
+</body>
+</html>

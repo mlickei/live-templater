@@ -27,9 +27,8 @@
 		return html.replace(variable, `<span class="live-templater-${htmlVar.type}-var" id="${htmlVar.variable}">${htmlVar.value}</span>`);
 	}
 
-	//TODO defer this to later I think, then we can capture the a tag involved and do crazzzy stuff
 	function replaceHrefVar(variable, htmlVar, html) {
-		return html/*.replace(variable, `${htmlVar.value}`)*/;
+		return html;
 	}
 
 	function replaceVariableValues(variable, htmlVar, html) {
@@ -127,11 +126,9 @@
 					return getColorInput(htmlVar, options);
 				case 'color-text':
 					return getColorInput(htmlVar, options, false);
-				case 'text':
-					return getTextInput(htmlVar, options);
 				case 'textarea':
 					return getTextAreaInput(htmlVar, options);
-				case 'href':
+				default :
 					return getTextInput(htmlVar, options);
 			}
 		}
@@ -206,7 +203,7 @@
 
 		function getEvaluatedTemplateHtml($html, htmlVars) {
 			//Remove text var wrappers
-			let $textAreaVars = $html.find('.live-templater-textarea-var');
+			let $textAreaVars = $html.find('.live-templater-textarea-var, .live-templater-text-var');
 
 			for(let idx = 0; idx < $textAreaVars.length; idx ++) {
 				let $this = $($textAreaVars.get(idx)),
@@ -226,7 +223,9 @@
 
 				if (htmlVar.type === 'href') {
 					//Do nothing for hrefs
-				} else if(htmlVar.type !== 'text' || htmlVar.type !== 'textarea') {
+				} if(htmlVar.type === 'background-image') {
+					html = html.split(`var(${htmlVar.variable})`).join(`url('${htmlVar.value}')`);
+				} else if(htmlVar.type !== 'text' && htmlVar.type !== 'textarea') {
 					html = html.split(`var(${htmlVar.variable})`).join(htmlVar.value);
 				}
 			}
@@ -260,7 +259,7 @@
 				hVars = htmlVars;
 
 			//TODO make the htmlvar do the html updating?
-			$variables.filter(':not(.text, .href)').on('change', 'input', function (evt) {
+			$variables.filter(':not(.text, .href, .background-image)').on('change', 'input', function (evt) {
 				let $input = $(this),
 					val = $input.val(),
 					htmlVar = hVars[$input.attr('name')];
@@ -294,6 +293,15 @@
 				$templaterContainer.find(`a.${opts.id}${htmlVar.variable}`).attr('href', val);
 			});
 
+			$variables.filter('.background-image').on('keyup change', 'input', function (evt) {
+				let $input = $(this),
+					val = $input.val(),
+					htmlVar = hVars[$input.attr('name')];
+
+				htmlVar.value = val;
+				templaterCont.style.setProperty(htmlVar.variable, `url("${val}")`);
+			});
+
 			if(opts.includeCopyBtn) {
 				$templateActions.on('click', '.template-copy-html-btn', function (evt) {
 					copyLiveTemplateToClipboard($templaterContainer.find('.live-template-preview'), hVars);
@@ -312,6 +320,15 @@
 
 					$el.addClass(`${opts.id}${htmlVar.variable}`);
 				});
+			});
+
+			let $templaterCont = $(`#${opts.id}`),
+				templaterCont = $templaterCont.get(0);
+			htmlVarArr.filter((hVar) => {
+				return hVar.type === 'background-image';
+			}).forEach((htmlVar) => {
+				$previewer.find(`#${opts.id}-${htmlVar.name} input`);
+				templaterCont.style.setProperty(htmlVar.variable, `url("${htmlVar.value}")`);
 			});
 		}
 
