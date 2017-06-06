@@ -32,8 +32,7 @@
 	}
 
 	function replaceVariableValues(variable, htmlVar, html) {
-		switch (htmlVar.type)
-		{
+		switch (htmlVar.type) {
 			case 'text':
 			case 'textarea':
 				return replaceTextVar(variable, htmlVar, html);
@@ -51,9 +50,9 @@
 		let htmlVarArr = [],
 			htmlVars = {};
 
-		for(let idx = 0; idx < vars.length; idx ++) {
+		for (let idx = 0; idx < vars.length; idx++) {
 			let variable = vars[idx],
-				varProps = variable.replace('${','').replace('}','').split('|'),
+				varProps = variable.replace('${', '').replace('}', '').split('|'),
 				newVar = varProps[0],
 				defaultVal = varProps[1],
 				varType = varProps[2],
@@ -62,9 +61,9 @@
 			let htmlVar = new HtmlVariable(variable, newVar, '--' + newVar, defaultVal, varType);
 			html = replaceVariableValues(variable, htmlVar, html);
 
-			if(htmlVars[newVar] == undefined) {
+			if (htmlVars[newVar] == undefined) {
 				// if (varType !== 'string') {
-					htmlVarArr.push(htmlVar);
+				htmlVarArr.push(htmlVar);
 				// }
 				//TODO remove completely?
 
@@ -82,17 +81,20 @@
 
 	$.fn.liveTemplater = function (options) {
 		let finalOpts = $.extend(true, {
-			includeCopyBtn: false
+			includeCopyBtn: true,
+			copyBtnLabel: 'Copy HTML',
+			includeResetBtn: true,
+			resetBtnLabel: 'Reset'
 		}, options);
 
 		let $this = $(this);
 
-		return this.each(function() {
+		return this.each(function () {
 			new LiveTemplater($this, finalOpts);
 		});
 	};
 
-	let LiveTemplater = function($target, options) {
+	let LiveTemplater = function ($target, options) {
 		let opts = options,
 			$container = $target,
 			processedHtml,
@@ -113,11 +115,11 @@
 		}
 
 		function getTextInput(htmlVar, options) {
-			return 	`<input type="text" name="${htmlVar.variableName}" id="${options.id}-${htmlVar.variableName}" value="${htmlVar.value}" />`;
+			return `<input type="text" name="${htmlVar.variableName}" id="${options.id}-${htmlVar.variableName}" value="${htmlVar.value}" />`;
 		}
 
 		function getTextAreaInput(htmlVar, options) {
-			return 	`<textarea name="${htmlVar.variableName}" id="${options.id}-${htmlVar.variableName}">${htmlVar.value}</textarea>`;
+			return `<textarea name="${htmlVar.variableName}" id="${options.id}-${htmlVar.variableName}">${htmlVar.value}</textarea>`;
 		}
 
 		function getVariableInputHtml(htmlVar, options) {
@@ -141,7 +143,7 @@
 			let varsHtml = '',
 				stylesHtml = '';
 
-			for(let idx = 0; idx < htmlVarArr.length; idx ++) {
+			for (let idx = 0; idx < htmlVarArr.length; idx++) {
 				let htmlVar = htmlVarArr[idx];
 				varsHtml = varsHtml + `<div class="template-variable ${htmlVar.type}"><label for="${options.id}-${htmlVar.variableName}">${htmlVar.variableName}</label>${getVariableInputHtml(htmlVar, options)}</div>`;
 				stylesHtml = stylesHtml + getCSSVariableStyle(htmlVar);
@@ -153,11 +155,24 @@
 			}
 		}
 
-		 function getTemplateActions(options) {
+		function getCopyBtn() {
+			return `<button class="template-btn template-copy-html-btn">${opts.copyBtnLabel}</button>`;
+		}
+
+		function getResetBtn() {
+			return `<button class="template-btn template-reset-btn">${opts.resetBtnLabel}</button>`;
+		}
+
+		function getTemplateActions(options) {
 			let actions = '';
 
-			if(options.includeCopyBtn) {
-				actions = actions + `<button class="template-btn template-copy-html-btn">Copy HTML</button>`;
+			//TODO turn into enum'esk list and loop through ones given to build instead of stupid if statements
+			if (options.includeCopyBtn) {
+				actions = actions + getCopyBtn();
+			}
+
+			if (options.includeResetBtn) {
+				actions = actions + getResetBtn();
 			}
 
 			return actions;
@@ -189,14 +204,14 @@
 			$html.find(`a.${opts.id}${htmlVar.variable}`).each((idx, el) => {
 				$(el).removeClass(`${opts.id}${htmlVar.variable}`);
 
-				if(!el.classList.length) {
+				if (!el.classList.length) {
 					el.removeAttribute('class');
 				}
 			});
 		}
 
 		function evaluateHrefVariables($html, htmlVars) {
-			for(let htmlVarKey of Object.keys(htmlVars)) {
+			for (let htmlVarKey of Object.keys(htmlVars)) {
 				evaluateHrefVariable($html, htmlVars[htmlVarKey])
 			}
 		}
@@ -205,7 +220,7 @@
 			//Remove text var wrappers
 			let $textAreaVars = $html.find('.live-templater-textarea-var, .live-templater-text-var');
 
-			for(let idx = 0; idx < $textAreaVars.length; idx ++) {
+			for (let idx = 0; idx < $textAreaVars.length; idx++) {
 				let $this = $($textAreaVars.get(idx)),
 					$parent = $this.parent(),
 					innerVal = $this.text();
@@ -218,14 +233,15 @@
 
 			let html = $html.html();
 
-			for(let htmlVarKey of Object.keys(htmlVars)) {
+			for (let htmlVarKey of Object.keys(htmlVars)) {
 				let htmlVar = htmlVars[htmlVarKey];
 
 				if (htmlVar.type === 'href') {
 					//Do nothing for hrefs
-				} if(htmlVar.type === 'background-image') {
+				}
+				if (htmlVar.type === 'background-image') {
 					html = html.split(`var(${htmlVar.variable})`).join(`url('${htmlVar.value}')`);
-				} else if(htmlVar.type !== 'text' && htmlVar.type !== 'textarea') {
+				} else if (htmlVar.type !== 'text' && htmlVar.type !== 'textarea') {
 					html = html.split(`var(${htmlVar.variable})`).join(htmlVar.value);
 				}
 			}
@@ -236,7 +252,7 @@
 		function copyLiveTemplateToClipboard($container, htmlVars) {
 			let txtAr = document.createElement('TEXTAREA');
 			txtAr.value = getEvaluatedTemplateHtml($container, htmlVars);
-			txtAr.readOnly= true;
+			txtAr.readOnly = true;
 
 			let $txtAr = $(txtAr).appendTo($container).css('height', 0).css('width', 0).css('overflow', 'hidden');
 			txtAr.select();
@@ -244,7 +260,7 @@
 
 			$txtAr.remove();
 
-			if(success) {
+			if (success) {
 				alert("Copied to clipboard!");
 			} else {
 				alert("Failed to copy to clipboard!");
@@ -302,9 +318,15 @@
 				templaterCont.style.setProperty(htmlVar.variable, `url("${val}")`);
 			});
 
-			if(opts.includeCopyBtn) {
+			if (opts.includeCopyBtn) {
 				$templateActions.on('click', '.template-copy-html-btn', function (evt) {
 					copyLiveTemplateToClipboard($templaterContainer.find('.live-template-preview'), hVars);
+				});
+			}
+
+			if (opts.includeResetBtn) {
+				$templateActions.on('click', '.template-reset-btn', function (evt) {
+					init();
 				});
 			}
 		}
@@ -347,7 +369,7 @@
 			$container.trigger(eventType, liveTemplater);
 		}
 
-		this.triggerEvent = function(eventType) {
+		this.triggerEvent = function (eventType) {
 			triggerEvent(eventType);
 		};
 
