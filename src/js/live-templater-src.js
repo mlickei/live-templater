@@ -97,6 +97,15 @@
 			htmlVars,
 			liveTemplater = this;
 
+		function getVariableValue(htmlVar, val) {
+			switch (htmlVar.type) {
+				case "font-size":
+					return val + 'px';
+				default:
+					return val;
+			}
+		}
+
 		function setupVariables() {
 			const results = processHtmlForVars(opts.rawHtml);
 
@@ -113,6 +122,15 @@
 			return `<input type="text" name="${htmlVar.variableName}" id="${options.id}-${htmlVar.variableName}" value="${htmlVar.value}" />`;
 		}
 
+		function getNumberInput(htmlVar, options) {
+			return `<input type="number" name="${htmlVar.variableName}" id="${options.id}-${htmlVar.variableName}" value="${htmlVar.value}" />`;
+		}
+
+		function getFontSizeInput(htmlVar, options) {
+			//TODO allow for size type selections (ex: em, px)
+			return `<input type="number" name="${htmlVar.variableName}" id="${options.id}-${htmlVar.variableName}" value="${htmlVar.value}" />px`;
+		}
+
 		function getTextAreaInput(htmlVar, options) {
 			return `<textarea name="${htmlVar.variableName}" id="${options.id}-${htmlVar.variableName}">${htmlVar.value}</textarea>`;
 		}
@@ -125,13 +143,17 @@
 					return getColorInput(htmlVar, options, false);
 				case 'textarea':
 					return getTextAreaInput(htmlVar, options);
+				case 'number':
+					return getNumberInput(htmlVar, options);
+				case 'font-size':
+					return getFontSizeInput(htmlVar, options);
 				default :
 					return getTextInput(htmlVar, options);
 			}
 		}
 
 		function getCSSVariableStyle(htmlVar) {
-			return `${htmlVar.variable}: ${htmlVar.value};`;
+			return `${htmlVar.variable}: ${getVariableValue(htmlVar, htmlVar.value)};`;
 		}
 
 		function getVariablesHtml(htmlVarArr, options) {
@@ -277,6 +299,7 @@
 					htmlVar = hVars[$input.attr('name')];
 
 				htmlVar.value = val;
+				val = getVariableValue(htmlVar, val);
 				templaterCont.style.setProperty(htmlVar.variable, val);
 			}).on('keyup', 'textarea', function (evt) {
 				let $textArea = $(this),
