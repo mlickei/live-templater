@@ -11,13 +11,15 @@
 
 	window.LiveTemplater = {EVENT_TYPES: EVENT_TYPES};
 
-	let HtmlVariable = function (parsedVariable, variableName, variable, value, type) {
-		this.parsedVariable = parsedVariable;
-		this.variableName = variableName;
-		this.variable = variable;
-		this.value = value;
-		this.type = type;
-	};
+	class HtmlVariable {
+		constructor (parsedVariable, variableName, variable, value, type) {
+			this.parsedVariable = parsedVariable;
+			this.variableName = variableName;
+			this.variable = variable;
+			this.value = value;
+			this.type = type;
+		}
+	}
 
 	function replaceCSSVar(variable, htmlVar, html) {
 		return html.replace(variable, `var(${htmlVar.variable})`);
@@ -27,17 +29,13 @@
 		return html.replace(variable, `<span class="live-templater-${htmlVar.type}-var" id="${htmlVar.variable}">${htmlVar.value}</span>`);
 	}
 
-	function replaceHrefVar(variable, htmlVar, html) {
-		return html;
-	}
-
 	function replaceVariableValues(variable, htmlVar, html) {
 		switch (htmlVar.type) {
 			case 'text':
 			case 'textarea':
 				return replaceTextVar(variable, htmlVar, html);
 			case 'href':
-				return replaceHrefVar(variable, htmlVar, html);
+				return html;
 			default:
 				return replaceCSSVar(variable, htmlVar, html);
 		}
@@ -62,10 +60,7 @@
 			html = replaceVariableValues(variable, htmlVar, html);
 
 			if (htmlVars[newVar] == undefined) {
-				// if (varType !== 'string') {
 				htmlVarArr.push(htmlVar);
-				// }
-				//TODO remove completely?
 
 				htmlObj[newVar] = htmlVar;
 				htmlVars = $.extend(true, htmlObj, htmlVars);
@@ -250,8 +245,9 @@
 		}
 
 		function copyLiveTemplateToClipboard($container, htmlVars) {
-			let txtAr = document.createElement('TEXTAREA');
-			txtAr.value = getEvaluatedTemplateHtml($container, htmlVars);
+			let txtAr = document.createElement('TEXTAREA'),
+				$containerClone = $container.clone();
+			txtAr.value = getEvaluatedTemplateHtml($containerClone, htmlVars);
 			txtAr.readOnly = true;
 
 			let $txtAr = $(txtAr).appendTo($container).css('height', 0).css('width', 0).css('overflow', 'hidden');
