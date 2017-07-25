@@ -264,9 +264,10 @@
 		}
 
 		async function replaceDisabledHrefs(hVar, html) {
-			let $html = $(html);
-			for(let el of $html.find(`a[templater-html-disabled="${hVar.variable}"]`)) {
-				await replaceDisabledHref(el);
+			let $html = $(html),
+				$disabled = $html.find(`a[templater-html-disabled="${hVar.variable}"]`);
+			for(let idx = 0; idx < $disabled.length; idx ++) {
+				await replaceDisabledHref($disabled.get(idx));
 			}
 
 			return $html.get(0).outerHTML;
