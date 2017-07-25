@@ -138,7 +138,7 @@
 		}
 
 		function getHrefInput(htmlVar, options) {
-			return `<input type="text" name="${htmlVar.variableName}" id="${options.id}-${htmlVar.variableName}" value="${htmlVar.value}" /><label class="template-variable-toggle" for="${options.id}-${htmlVar.variableName}--toggle" >enable link</label><input id="${options.id}-${htmlVar.variableName}--toggle" name="${htmlVar.variableName}--toggle" value="${htmlVar.variableName}" type="checkbox" checked=${options.enableLinksByDefault ? "checked" : ""} name/>`;
+			return `<input type="text" name="${htmlVar.variableName}" id="${options.id}-${htmlVar.variableName}" value="${htmlVar.value}" /><label class="template-variable-toggle" for="${options.id}-${htmlVar.variableName}--toggle" >enable link</label><input id="${options.id}-${htmlVar.variableName}--toggle" name="${htmlVar.variableName}--toggle" value="${htmlVar.variableName}" type="checkbox" ${options.enableLinksByDefault ? 'checked="checked"' : ""} name/>`;
 		}
 
 		function getVariableInputHtml(htmlVar, options) {
