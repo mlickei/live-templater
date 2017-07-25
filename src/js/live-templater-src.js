@@ -18,6 +18,7 @@
 			this.variable = variable;
 			this.value = value;
 			this.type = type;
+			this.enabled = true;
 		}
 	}
 
@@ -79,7 +80,8 @@
 			includeCopyBtn: true,
 			copyBtnLabel: 'Copy HTML',
 			includeResetBtn: true,
-			resetBtnLabel: 'Reset'
+			resetBtnLabel: 'Reset',
+			enableLinksByDefault: true
 		}, options);
 
 		let $this = $(this);
@@ -128,11 +130,15 @@
 
 		function getFontSizeInput(htmlVar, options) {
 			//TODO allow for size type selections (ex: em, px)
-			return `<input type="number" name="${htmlVar.variableName}" id="${options.id}-${htmlVar.variableName}" value="${htmlVar.value}" />px`;
+			return `<input type="number" name="${htmlVar.variableName}" id="${options.id}-${htmlVar.variableName}" value="${htmlVar.value}" /><span class="font-size-unit-label">px</span>`;
 		}
 
 		function getTextAreaInput(htmlVar, options) {
 			return `<textarea name="${htmlVar.variableName}" id="${options.id}-${htmlVar.variableName}">${htmlVar.value}</textarea>`;
+		}
+
+		function getHrefInput(htmlVar, options) {
+			return `<input type="text" name="${htmlVar.variableName}" id="${options.id}-${htmlVar.variableName}" value="${htmlVar.value}" /><label class="template-variable-toggle" for="${options.id}-${htmlVar.variableName}--toggle" >enable link</label><input id="${options.id}-${htmlVar.variableName}--toggle" name="${htmlVar.variableName}--toggle" value="${htmlVar.variableName}" type="checkbox" checked=${options.enableLinksByDefault ? "checked" : ""} name/>`;
 		}
 
 		function getVariableInputHtml(htmlVar, options) {
@@ -147,6 +153,8 @@
 					return getNumberInput(htmlVar, options);
 				case 'font-size':
 					return getFontSizeInput(htmlVar, options);
+				case 'href':
+					return getHrefInput(htmlVar, options);
 				default :
 					return getTextInput(htmlVar, options);
 			}
@@ -224,6 +232,10 @@
 				if (!el.classList.length) {
 					el.removeAttribute('class');
 				}
+
+				if (!htmlVar.enabled) {
+					$(el).attr('templater-html-disabled', htmlVar.variable);
+				}
 			});
 		}
 
@@ -233,7 +245,42 @@
 			}
 		}
 
-		function getEvaluatedTemplateHtml($html, htmlVars) {
+		//TODO maybe instead of replacing it, it could just remove it entirely? or at least give the option to do that
+		function replaceDisabledHref(el) {
+			return new Promise(resolve => {
+				let innerHtml = el.innerHTML,
+					classNames = el.className,
+					id = el.id,
+					styles = el.style.cssText;
+
+				$(el).replaceWith(`<span class="${classNames}" id="${id}" style="${styles}">${innerHtml}</span>`);
+				resolve();
+			});
+		}
+
+		async function replaceDisabledHrefs(hVar, html) {
+			let $html = $(html);
+			for(let el of $html.find(`a[templater-html-disabled="${hVar.variable}"]`)) {
+				await replaceDisabledHref(el);
+			}
+
+			return $html.get(0).outerHTML;
+		}
+
+		async function evaluatedDisabled(htmlVars, html) {
+			//TODO make more generic so that it eventually handles other disabled things inside of it. So work from inside out.
+			let disabledVars = Object.values(htmlVars).filter((hVar) => {
+				return hVar.type === 'href' && !hVar.enabled;
+			});
+
+			for(let disabledVar of disabledVars) {
+				html = await replaceDisabledHrefs(disabledVar, html);
+			}
+
+			return html;
+		}
+
+		async function getEvaluatedTemplateHtml($html, htmlVars) {
 			//Remove text var wrappers
 			let $textAreaVars = $html.find('.live-templater-textarea-var, .live-templater-text-var');
 
@@ -248,7 +295,7 @@
 
 			evaluateHrefVariables($html, htmlVars);
 
-			let html = $html.html();
+			let html = $html.get(0).outerHTML;
 
 			for (let htmlVarKey of Object.keys(htmlVars)) {
 				let htmlVar = htmlVars[htmlVarKey];
@@ -258,18 +305,20 @@
 				}
 				if (htmlVar.type === 'background-image') {
 					html = html.split(`var(${htmlVar.variable})`).join(`url('${htmlVar.value}')`);
+				} else if(htmlVar.type === 'font-size') {
+					html = html.split(`var(${htmlVar.variable})`).join(htmlVar.value + 'px');
 				} else if (htmlVar.type !== 'text' && htmlVar.type !== 'textarea') {
 					html = html.split(`var(${htmlVar.variable})`).join(htmlVar.value);
 				}
 			}
 
-			return html;
+			return await evaluatedDisabled(htmlVars, html);
 		}
 
-		function copyLiveTemplateToClipboard($container, htmlVars) {
+		async function copyLiveTemplateToClipboard($container, htmlVars) {
 			let txtAr = document.createElement('TEXTAREA'),
 				$containerClone = $container.clone();
-			txtAr.value = getEvaluatedTemplateHtml($containerClone, htmlVars);
+			txtAr.value = await getEvaluatedTemplateHtml($containerClone, htmlVars);
 			txtAr.readOnly = true;
 
 			let $txtAr = $(txtAr).appendTo($container).css('height', 0).css('width', 0).css('overflow', 'hidden');
@@ -278,11 +327,7 @@
 
 			$txtAr.remove();
 
-			if (success) {
-				alert("Copied to clipboard!");
-			} else {
-				alert("Failed to copy to clipboard!");
-			}
+			return success;
 		}
 
 		function attachEvents() {
@@ -319,13 +364,27 @@
 				$templaterContainer.find(`#${htmlVar.variable}`).text(val);
 			});
 
-			$variables.filter('.href').on('keyup change', 'input', function (evt) {
+			$variables.filter('.href').on('keyup change', 'input[type="text"]', function (evt) {
 				let $input = $(this),
 					val = $input.val(),
 					htmlVar = hVars[$input.attr('name')];
 
 				htmlVar.value = val;
 				$templaterContainer.find(`a.${opts.id}${htmlVar.variable}`).attr('href', val);
+			}).on('change', 'input[type="checkbox"]', function (evt) {
+				let $input = $(this),
+					$hrefInput = $input.parent().find('input[type="text"]'),
+					val = $input.val(),
+					htmlVar = hVars[val],
+					isChecked = $input.is(':checked');
+
+				htmlVar.enabled = isChecked;
+
+				if(isChecked) {
+					$hrefInput.removeAttr('disabled');
+				} else {
+					$hrefInput.attr('disabled', 'disabled');
+				}
 			});
 
 			$variables.filter('.background-image').on('keyup change', 'input', function (evt) {
@@ -339,7 +398,13 @@
 
 			if (opts.includeCopyBtn) {
 				$templateActions.on('click', '.template-copy-html-btn', function (evt) {
-					copyLiveTemplateToClipboard($templaterContainer.find('.live-template-preview'), hVars);
+					copyLiveTemplateToClipboard($templaterContainer.find('.live-template-preview'), hVars).then((success) => {
+						if (success) {
+							alert("Copied to clipboard!");
+						} else {
+							alert("Failed to copy to clipboard!");
+						}
+					});
 				});
 			}
 
@@ -356,7 +421,8 @@
 			htmlVarArr.filter((hVar) => {
 				return hVar.type === 'href';
 			}).forEach((htmlVar) => {
-				$previewer.find(`a[href="${htmlVar.parsedVariable}"]`).each((idx, el) => {
+				htmlVar.targetHtml = $previewer.find(`a[href="${htmlVar.parsedVariable}"]`);
+				htmlVar.targetHtml.each((idx, el) => {
 					let $el = $(el).attr('href', htmlVar.value);
 
 					$el.addClass(`${opts.id}${htmlVar.variable}`);
@@ -365,12 +431,15 @@
 
 			let $templaterCont = $(`#${opts.id}`),
 				templaterCont = $templaterCont.get(0);
+
 			htmlVarArr.filter((hVar) => {
 				return hVar.type === 'background-image';
 			}).forEach((htmlVar) => {
 				$previewer.find(`#${opts.id}-${htmlVar.name} input`);
 				templaterCont.style.setProperty(htmlVar.variable, `url("${htmlVar.value}")`);
 			});
+
+			//TODO we should save the referenced html element here so that we can manipulate it at will
 		}
 
 		function removeTemplateUI() {
