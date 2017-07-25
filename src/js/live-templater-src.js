@@ -12,13 +12,13 @@
 	window.LiveTemplater = {EVENT_TYPES: EVENT_TYPES};
 
 	class HtmlVariable {
-		constructor (parsedVariable, variableName, variable, value, type) {
+		constructor (parsedVariable, variableName, variable, value, type, enabled = true) {
 			this.parsedVariable = parsedVariable;
 			this.variableName = variableName;
 			this.variable = variable;
 			this.value = value;
 			this.type = type;
-			this.enabled = true;
+			this.enabled = enabled;
 		}
 	}
 
@@ -42,7 +42,7 @@
 		}
 	}
 
-	function processHtmlForVars(html) {
+	function processHtmlForVars(html, options) {
 		const varRegx = /\${[^{,}]+}/g,
 			vars = html.match(varRegx);
 
@@ -57,7 +57,12 @@
 				varType = varProps[2],
 				htmlObj = {};
 
-			let htmlVar = new HtmlVariable(variable, newVar, '--' + newVar, defaultVal, varType);
+			let htmlVar = '';
+			if(varType === 'href') {
+				htmlVar = new HtmlVariable(variable, newVar, '--' + newVar, defaultVal, varType, options.enableLinksByDefault);
+			} else {
+				htmlVar = new HtmlVariable(variable, newVar, '--' + newVar, defaultVal, varType);
+			}
 			html = replaceVariableValues(variable, htmlVar, html);
 
 			if (htmlVars[newVar] == undefined) {
@@ -109,7 +114,7 @@
 		}
 
 		function setupVariables() {
-			const results = processHtmlForVars(opts.rawHtml);
+			const results = processHtmlForVars(opts.rawHtml, opts);
 
 			processedHtml = results.newHtml;
 			htmlVarArr = results.htmlVarArr;
@@ -138,7 +143,7 @@
 		}
 
 		function getHrefInput(htmlVar, options) {
-			return `<input type="text" name="${htmlVar.variableName}" id="${options.id}-${htmlVar.variableName}" value="${htmlVar.value}" /><label class="template-variable-toggle" for="${options.id}-${htmlVar.variableName}--toggle" >enable link</label><input id="${options.id}-${htmlVar.variableName}--toggle" name="${htmlVar.variableName}--toggle" value="${htmlVar.variableName}" type="checkbox" ${options.enableLinksByDefault ? 'checked="checked"' : ""} name/>`;
+			return `<input type="text" name="${htmlVar.variableName}" id="${options.id}-${htmlVar.variableName}" value="${htmlVar.value}" ${!options.enableLinksByDefault ? 'disabled="disabled"' : ""} /><label class="template-variable-toggle" for="${options.id}-${htmlVar.variableName}--toggle" >enable link</label><input id="${options.id}-${htmlVar.variableName}--toggle" name="${htmlVar.variableName}--toggle" value="${htmlVar.variableName}" type="checkbox" ${options.enableLinksByDefault ? 'checked="checked"' : ""} name/>`;
 		}
 
 		function getVariableInputHtml(htmlVar, options) {
