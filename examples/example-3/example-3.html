@@ -16,11 +16,11 @@
 		$('.example-templates').on(LiveTemplater.EVENT_TYPES.INITIALIZED, (evt, templater) => {
 			console.log(templater);
 		}).liveTemplater({
-			id: 'example-1',
-			displayName: 'Example 1',
+			id: 'example-3',
+			displayName: 'Example 3',
 			includeCopyBtn: true,
 			enableLinksByDefault: false,
-			rawHtml: '<div style="background: ${background-image|/live-templater/examples/example-3/images/test-1.jpg|background-image}; min-width: 200px; min-height: 100px; color: ${font-color-1|#ffffff|color};"><div style="background-color: ${background-color-1|#000000|color};"><a href="${link|http://www.example.com/|href}"><span>${example-text-1|This is example text inside a colored box|text}</span></a></div></div>'
+			rawHtml: '<div min-width: 200px; min-height: 100px; color: ${font-color-1|#ffffff|color};"><img src="${image-src|/live-templater/examples/example-3/images/test-1.jpg|attr-text|src}" alt="${image-alt-text|Example Image|attr-text|alt}" /><div style="background-color: ${background-color-1|#000000|color};"><a href="${link|http://www.example.com/|href}"><span>${example-text-1|This is example text inside a colored box|text}</span></a></div></div>'
 		});
 	});
 </script>

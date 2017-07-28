@@ -19,6 +19,7 @@
 			this.value = value;
 			this.type = type;
 			this.enabled = enabled;
+			this.attributeName = null;
 		}
 	}
 
@@ -30,6 +31,16 @@
 		return html.replace(variable, `<span class="live-templater-${htmlVar.type}-var" id="${htmlVar.variable}">${htmlVar.value}</span>`);
 	}
 
+	function replaceAttributeText(variable, htmlVar, html) {
+		let varStart = html.indexOf(variable),
+			varEnd = varStart + variable.length,
+			preVar = html.substring(0, varStart),
+			postVar = html.substring(varEnd, varEnd + 1),
+			restAfterVar = html.substring(varEnd + 1, html.length);
+
+		return `${preVar}${htmlVar.value}${postVar} data-templater-attr-${htmlVar.attributeName}="${htmlVar.variableName}" ${restAfterVar}`;
+	}
+
 	function replaceVariableValues(variable, htmlVar, html) {
 		switch (htmlVar.type) {
 			case 'text':
@@ -37,6 +48,8 @@
 				return replaceTextVar(variable, htmlVar, html);
 			case 'href':
 				return html;
+			case 'attr-text':
+				return replaceAttributeText(variable, htmlVar, html);
 			default:
 				return replaceCSSVar(variable, htmlVar, html);
 		}
@@ -57,12 +70,18 @@
 				varType = varProps[2],
 				htmlObj = {};
 
-			let htmlVar = '';
+			let htmlVar = {};
+
 			if(varType === 'href') {
 				htmlVar = new HtmlVariable(variable, newVar, '--' + newVar, defaultVal, varType, options.enableLinksByDefault);
 			} else {
 				htmlVar = new HtmlVariable(variable, newVar, '--' + newVar, defaultVal, varType);
 			}
+
+			if(varProps.length > 3) {
+				htmlVar.attributeName = varProps[3];
+			}
+
 			html = replaceVariableValues(variable, htmlVar, html);
 
 			if (htmlVars[newVar] == undefined) {
@@ -71,6 +90,8 @@
 				htmlObj[newVar] = htmlVar;
 				htmlVars = $.extend(true, htmlObj, htmlVars);
 			}
+
+
 		}
 
 		return {
@@ -313,6 +334,8 @@
 					html = html.split(`var(${htmlVar.variable})`).join(`url('${htmlVar.value}')`);
 				} else if(htmlVar.type === 'font-size') {
 					html = html.split(`var(${htmlVar.variable})`).join(htmlVar.value + 'px');
+				} else if(htmlVar.type === 'attr-text') {
+					html = html.replace(`data-templater-attr-${htmlVar.attributeName}="${htmlVar.variableName}"`, '');
 				} else if (htmlVar.type !== 'text' && htmlVar.type !== 'textarea') {
 					html = html.split(`var(${htmlVar.variable})`).join(htmlVar.value);
 				}
@@ -344,7 +367,7 @@
 				hVars = htmlVars;
 
 			//TODO make the htmlvar do the html updating?
-			$variables.filter(':not(.text, .href, .background-image)').on('change', 'input', function (evt) {
+			$variables.filter(':not(.text, .href, .background-image, .attr-text)').on('change', 'input', function (evt) {
 				let $input = $(this),
 					val = $input.val(),
 					htmlVar = hVars[$input.attr('name')];
@@ -359,6 +382,15 @@
 
 				htmlVar.value = val;
 				$templaterContainer.find(`#${htmlVar.variable}`).text(val);
+			});
+
+			$variables.filter('.attr-text').on('keyup change', 'input', function (evt) {
+				let $input = $(this),
+					val = $input.val(),
+					htmlVar = hVars[$input.attr('name')];
+
+				htmlVar.value = val;
+				$templaterContainer.find(`*[data-templater-attr-${htmlVar.attributeName}="${htmlVar.variableName}"]`).attr(htmlVar.attributeName, val);
 			});
 
 			$variables.filter('.text').on('keyup change', 'input', function (evt) {
