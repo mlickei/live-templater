@@ -107,7 +107,8 @@
 			copyBtnLabel: 'Copy HTML',
 			includeResetBtn: true,
 			resetBtnLabel: 'Reset',
-			enableLinksByDefault: true
+			enableLinksByDefault: true,
+			allowLineBreaks: true
 		}, options);
 
 		let $this = $(this);
@@ -380,8 +381,13 @@
 					val = $textArea.val(),
 					htmlVar = hVars[$textArea.attr('name')];
 
-				htmlVar.value = val;
-				$templaterContainer.find(`#${htmlVar.variable}`).text(val);
+				if(opts.allowLineBreaks) {
+					htmlVar.value = val.replace(/\n/g, '<br/>');
+				} else {
+					htmlVar.value = val;
+				}
+
+				$templaterContainer.find(`#${htmlVar.variable}`).html(htmlVar.value);
 			});
 
 			$variables.filter('.attr-text').on('keyup change', 'input', function (evt) {
