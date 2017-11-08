@@ -315,10 +315,12 @@
 			for (let idx = 0; idx < $textAreaVars.length; idx++) {
 				let $this = $($textAreaVars.get(idx)),
 					$parent = $this.parent(),
-					innerVal = $this.text();
+					//Allows us to grab the line breaks
+					innerVal = $this.html();
 
 				$this.remove();
-				$parent.text(innerVal);
+				//Allows us to pass along those line breaks
+				$parent.html(innerVal);
 			}
 
 			evaluateHrefVariables($html, htmlVars);
