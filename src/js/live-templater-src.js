@@ -6,7 +6,13 @@
 		INITIALIZED: "initialized",
 		// BEFORE_COPY: "before-copy",
 		// AFTER_COPY: "after-copy"
+		AFTER_CHANGE: "after-change"
 		//TODO Add before and afters for most of the general actions that occur
+	};
+
+	const MESSAGE_TYPES = {
+		ERROR: "error",
+		WARNING: "warning"
 	};
 
 	window.LiveTemplater = {EVENT_TYPES: EVENT_TYPES};
@@ -108,7 +114,10 @@
 			includeResetBtn: true,
 			resetBtnLabel: 'Reset',
 			enableLinksByDefault: true,
-			allowLineBreaks: true
+			allowLineBreaks: true,
+			maxWidthWarning: {
+				message: "The max width has been exceeded"
+			}
 		}, options);
 
 		let $this = $(this);
@@ -121,10 +130,77 @@
 	let LiveTemplater = function ($target, options) {
 		let opts = options,
 			$container = $target,
+			messages = {
+				[MESSAGE_TYPES.ERROR]: [],
+				[MESSAGE_TYPES.WARNING]: []
+			},
 			processedHtml,
 			htmlVarArr,
 			htmlVars,
 			liveTemplater = this;
+
+		function getMessageHtml(messageType, message) {
+			return `<div class="templater-message templater-message-${messageType} ${message.id}" data-message-id="${message.id}"><span class="templater-message-${messageType}-icon"></span>${message.message}</div>`;
+		}
+
+		function renderMessagesForType(messageType, $messageContainer) {
+			let messageIds = [];
+
+			for(let message of messages[messageType]) {
+				if(!$messageContainer.find(`.${message.id}`).length) {
+					$messageContainer.append(getMessageHtml(messageType, message));
+				}
+
+				messageIds.push(message.id);
+			}
+
+			return messageIds;
+		}
+
+		function renderAllMessages() {
+			let $messageContainer = $container.find('.templater-message-container'),
+				messageIds = [];
+
+			//Render errors first
+			messageIds = messageIds.concat(renderMessagesForType(MESSAGE_TYPES.ERROR, $messageContainer));
+			//Render warnings next
+			messageIds = messageIds.concat(renderMessagesForType(MESSAGE_TYPES.WARNING, $messageContainer));
+
+			let $allMessages = $messageContainer.find('.templater-message');
+
+			if(messageIds.length !== $allMessages.length) {
+				$allMessages.each((idx, message) => {
+					let $message = $(message),
+						messageId = $message.data('message-id');
+
+					if(messageIds.indexOf(messageId) < 0) {
+						$message.remove();
+					}
+				});
+			}
+		}
+
+		function showMessage(eventType, id, message) {
+			if(messages[eventType].every((message) => {return message.id !== id})) {
+				messages[eventType].push({id: id, message: message});
+				renderAllMessages();
+			}
+		}
+
+		function removeMessage(eventType, id) {
+			let removeIdx = -1;
+
+			messages[eventType].forEach((message, idx) => {
+				if(message.id === id) {
+					removeIdx = idx;
+				}
+			});
+
+			if(removeIdx >= 0) {
+				messages[eventType].splice(removeIdx, 1);
+				renderAllMessages();
+			}
+		}
 
 		function getVariableValue(htmlVar, val) {
 			switch (htmlVar.type) {
@@ -230,22 +306,33 @@
 			return actions;
 		}
 
+		function getMaxWidthContainer(maxWidth) {
+			return `<div class="templater-max-width-container">
+						<div class="templater-max-width-left-cover" style="right: calc(100% - ((100% - ${maxWidth}px) / 2));"></div>
+						<div class="templater-max-width-indicator" style="width:${maxWidth}px;"></div>
+						<div class="templater-max-width-right-cover" style="left: calc(100% - ((100% - ${maxWidth}px) / 2));"></div>
+					</div>`;
+		}
+
 		function getTemplateHtml(processedHtml, htmlVarArr, options) {
 			const variablesHtml = getVariablesHtml(htmlVarArr, options);
 
 			return `<div class="templater-container" id="${options.id}">
-					<div class="templater-top-container">
-						<div class="template-name">${options.displayName !== undefined ? options.displayName : options.id}</div>
-						<div class="template-actions">${getTemplateActions(options)}</div>
-					</div>
-					<div class="templater-preview-container">
-						<div class="template-variables">${variablesHtml.varsHtml}</div>
-						<div class="live-template-preview-container">
-							<style>#${options.id} { ${variablesHtml.stylesHtml} }</style>
-							<div class="live-template-preview">${processedHtml}</div>
+						<div class="templater-top-container">
+							<div class="template-name">${options.displayName !== undefined ? options.displayName : options.id}</div>
+							<div class="template-actions">${getTemplateActions(options)}</div>
 						</div>
-					</div>
-				</div>`;
+						<div class="templater-preview-container">
+							<div class="template-variables">${variablesHtml.varsHtml}</div>
+							<div class="templater-preview-right-column">
+								<div class="templater-message-container"></div>
+								<div class="live-template-preview-container">
+									<style>#${options.id} { ${variablesHtml.stylesHtml} }</style>
+									<div class="live-template-preview">${processedHtml}</div>
+								</div>
+							</div>
+						</div>
+					</div>`;
 		}
 
 		function buildTemplateUI($container, processedHtml, htmlVarArr, options) {
@@ -378,6 +465,7 @@
 				htmlVar.value = val;
 				val = getVariableValue(htmlVar, val);
 				templaterCont.style.setProperty(htmlVar.variable, val);
+				triggerEvent(EVENT_TYPES.AFTER_CHANGE);
 			}).on('keyup', 'textarea', function (evt) {
 				let $textArea = $(this),
 					val = $textArea.val(),
@@ -390,6 +478,7 @@
 				}
 
 				$templaterContainer.find(`#${htmlVar.variable}`).html(htmlVar.value);
+				triggerEvent(EVENT_TYPES.AFTER_CHANGE);
 			});
 
 			$variables.filter('.attr-text').on('keyup change', 'input', function (evt) {
@@ -399,6 +488,7 @@
 
 				htmlVar.value = val;
 				$templaterContainer.find(`*[data-templater-attr-${htmlVar.attributeName}="${htmlVar.variableName}"]`).attr(htmlVar.attributeName, val);
+				triggerEvent(EVENT_TYPES.AFTER_CHANGE);
 			});
 
 			$variables.filter('.text').on('keyup change', 'input', function (evt) {
@@ -408,6 +498,7 @@
 
 				htmlVar.value = val;
 				$templaterContainer.find(`#${htmlVar.variable}`).text(val);
+				triggerEvent(EVENT_TYPES.AFTER_CHANGE);
 			});
 
 			$variables.filter('.href').on('keyup change', 'input[type="text"]', function (evt) {
@@ -417,6 +508,7 @@
 
 				htmlVar.value = val;
 				$templaterContainer.find(`a.${opts.id}${htmlVar.variable}`).attr('href', val);
+				triggerEvent(EVENT_TYPES.AFTER_CHANGE);
 			}).on('change', 'input[type="checkbox"]', function (evt) {
 				let $input = $(this),
 					$hrefInput = $input.parent().find('input[type="text"]'),
@@ -431,6 +523,8 @@
 				} else {
 					$hrefInput.attr('disabled', 'disabled');
 				}
+
+				triggerEvent(EVENT_TYPES.AFTER_CHANGE);
 			});
 
 			$variables.filter('.background-image').on('keyup change', 'input', function (evt) {
@@ -440,7 +534,29 @@
 
 				htmlVar.value = val;
 				templaterCont.style.setProperty(htmlVar.variable, `url("${val}")`);
+				triggerEvent(EVENT_TYPES.AFTER_CHANGE);
 			});
+
+			if(!!opts.maxWidthWarning.maxWidth && opts.maxWidthWarning.maxWidth > 0) {
+				let maxWidth = opts.maxWidthWarning.maxWidth,
+					widthWarningMessageId = "max-width-warning";
+
+				$(getMaxWidthContainer(maxWidth)).appendTo($templaterContainer.find('.live-template-preview-container'));
+
+				$container.on(`${EVENT_TYPES.AFTER_CHANGE} ${EVENT_TYPES.INITIALIZED}`, function() {
+					let $previewContainer = $templaterContainer.find('.live-template-preview-container'),
+						$preview = $templaterContainer.find('.live-template-preview'),
+						width = $preview.width();
+
+					if(width > maxWidth) {
+						$previewContainer.addClass('width-limit-exceeded');
+						showMessage(MESSAGE_TYPES.WARNING, widthWarningMessageId, opts.maxWidthWarning.message);
+					} else {
+						$previewContainer.removeClass('width-limit-exceeded');
+						removeMessage(MESSAGE_TYPES.WARNING, widthWarningMessageId)
+					}
+				});
+			}
 
 			if (opts.includeCopyBtn) {
 				$templateActions.on('click', '.template-copy-html-btn', function (evt) {
